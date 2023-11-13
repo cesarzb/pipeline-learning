@@ -7,9 +7,18 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_DB: $TEST_DB_HOST
+          POSTGRES_USER: $TEST_DB_USERNAME
+          POSTGRES_PASSWORD: $TEST_DB_PASSWORD
+        ports:
+          - 5432:5432
     env:
       RAILS_ENV: test
-      DATABASE_URL: "sqlite3::memory:"
+      DATABASE_URL: "postgresql://postgres@localhost/pipeline_learning_test"
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -17,7 +26,9 @@ jobs:
         uses: ruby/setup-ruby@55283cc23133118229fd3f97f9336ee23a179fcf # v1.146.0
         with:
           bundler-cache: true
-      - name: Create SQLite database
+      - name: Wait for PostgreSQL to be ready
+        run: dockerize -wait tcp://localhost:5432 -timeout 1m
+      - name: Create PostgreSQL database
         run: bin/rails db:setup
       - name: Run tests
         run: bin/rake
